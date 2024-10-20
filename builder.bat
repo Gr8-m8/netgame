@@ -1,0 +1,1 @@
+py -m PyInstaller --onefile main.py -n "Launcher" --collect-submodules "main.py" --collect-submodules "game.py" --collect-submodules "networkingagent.py"

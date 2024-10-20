@@ -3,16 +3,16 @@ from _thread import start_new_thread
 import sys
 
 class NetworkAgent:
+    DATAFILE = f"data/connection.data"
     
     def send(self): pass
 
     @staticmethod
     def LoadConnectionData():
-        address = None
-        port = None
-        path = f"data/connection.data"
+        address = "127.0.0.1"
+        port = 7777
         try:
-            datafile = open(path, "r")
+            datafile = open(NetworkAgent.DATAFILE, "r")
             address = str(datafile.readline()[:-1])
             port = int(datafile.readline())
             datafile.close()
@@ -22,6 +22,19 @@ class NetworkAgent:
         DEBUG = False
         print(f"[{address}:{port}]") if DEBUG else None
         return address, port
+    
+    @staticmethod
+    def SaveConnectionData(qaddress:str, qport:int):
+        address = qaddress
+        port = qport
+
+        try:
+            datafile = open(NetworkAgent.DATAFILE, "w")
+            datafile.write(address)
+            datafile.write(port)
+            datafile.close()
+        except: pass
+
     
 
 class Server(NetworkAgent):
