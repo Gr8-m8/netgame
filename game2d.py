@@ -1,93 +1,56 @@
 import pygame
+from game import Game, Scene
+from networkagent import NetworkAgent
+from scenario import scenario1
+class Game2d(Game):
+    def __init__(self, networkagent:NetworkAgent, winxy: tuple) -> None:
+        self.networkagent:NetworkAgent = networkagent
+        self.winxySCALE = winxy[2]
+        self.winxy:tuple = (winxy[0] * self.winxySCALE, winxy[1]*self.winxySCALE)
+        self.window = pygame.display.set_mode(self.winxy)
+        pygame.display.set_caption("Game")
+        pygame.font.init()
+        
+        self.scene = scenario1()
+        
+        FONTSIZE = 24
+        self.font = pygame.font.SysFont("monospace", int(16))
+        self.clock = pygame.time.Clock()
+        self.gameloop = True
+        while self.gameloop:
+            self.clock.tick(60)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.gameloop = False
+                    pygame.quit()
+            
+            self.Update()
+            self.Draw()
 
-SCALE = 2
-winxy = (500*SCALE,500*SCALE)
-window = pygame.display.set_mode(winxy)
-pygame.display.set_caption("ItsaGame")
+    def Draw(self):
+        self.window.fill(rect=(0,0, self.winxy[0], self.winxy[1]),color=(0,0,0))
+        pygame.draw.rect(self.window, (50, 50 ,50), (self.winxy[0]/self.winxySCALE, self.winxy[1]-4*(self.winxy[1]/self.winxySCALE), self.winxy[0]-2*(self.winxy[0]/self.winxySCALE), 3*self.winxy[1]/self.winxySCALE))
+        self.scene.Draw(self.window, self.font)
+        pygame.display.update()
 
-FRICTION = 1#0.98
-ACCMAX = 6
-
-class XY:
-    def __init__(self, x:int = 0, y:int = 0) -> None:
-        self.x = x
-        self.y = y
-
-    def move(self, x = 0, y = 0):
-        self.x += x
-        self.y += y
-
-    def moveabs(self, x = 0, y = 0):
-        self.x = x
-        self.y = y
-
-class Camera:
-    def __init__(self, position:XY, offset:XY) -> None:
-        self.position = position
-        self.offset = offset
-
-class Player:
-    def __init__(self, position: XY) -> None:
-        self.position = position
-        self.size = 10
-        self.velocity = XY(0,0)
-        self.speed = 1
-
-        self.color = (255, 0, 0)
-
-    def draw(self, window, camera:Camera):
-        pygame.draw.circle(surface=window, color=self.color, center=(self.position.x-camera.position.x, self.position.y-camera.position.y), radius=self.size)
-
-    def move(self):
+    def Update(self):
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.velocity.move(-self.speed, 0)
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.velocity.move(self.speed, 0)
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            self.velocity.move(0, -self.speed)
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.velocity.move(0, self.speed)
 
-        self.position.move(self.velocity.x, self.velocity.y)
-        
-        self.velocity.moveabs(
-            min(max(self.velocity.x*FRICTION, -ACCMAX), ACCMAX),
-            min(max(self.velocity.y*FRICTION, -ACCMAX), ACCMAX)
-            )
-        #self.velocity.x *= FRICTION
-        #self.velocity.y *= FRICTION
-
-        self.position.moveabs(
-            min(max(self.position.x, self.size), window.get_width()-self.size),
-            min(max(self.position.y, self.size), window.get_height()-self.size)
-            )
-
-
-def redrawWindow(player: Player, camera:Camera):
-    window.fill(rect=(0,0, window.get_width(), window.get_height()),color=(0,0,0))
-    window.fill(rect=(0-camera.position.x,0-camera.position.y, window.get_width()-camera.position.x, window.get_height()-camera.position.y),color=(200,200,200))
-    pygame.draw.circle(window, (0, 0, 200), (20-camera.position.x, 20-camera.position.y), 10)
-    player.draw(window, camera)
-    pygame.display.update()
-
-def main():
-    player = Player(XY(20, 20))
-    camera = Camera(XY(0,0), XY(-window.get_width()/2, -window.get_height()/2))
-    gameloop = True
-    clock = pygame.time.Clock()
-
-    while gameloop:
-        clock.tick(60)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-                pygame.quit()
-
-        camera.position.moveabs(player.position.x+camera.offset.x, player.position.y+camera.offset.y)
-        player.move()
-        redrawWindow(player, camera)
-
-
-main()
+class Scene2d(Scene):
+    def Draw(self, canvas, font):
+        #self.font.render('TEXT RENDER', True, (255,255,255))
+        #self.window.blit(text, (20, 20))
+        x = y = s = 16
+        texts = []
+        scenetitle = font.render(f'{self.location.name}{self.location.desc}', True, (255,255,255))
+        canvas.blit(scenetitle, (x, y))
+        y+=s
+        #scenedescription = font.render(f'{self.location.name}', True, (255,255,255))
+        #canvas.blit(scenetitle, (x, y))
+        #y+=s
+        for k,v in self.location.props.items()|self.location.items.items()|self.location.actors.items():
+            text = font.render(f'{k}: {v.desc}', True, (255,255,255))
+            canvas.blit(text, (x, y))
+            y+=s
+            texts.append(text)
