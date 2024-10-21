@@ -1,131 +1,160 @@
-import pygame
+import time
+import os
+import msvcrt
+
 from networkagent import NetworkAgent
+from gameobject import GameObject, Location, Prop, Item, Actor
+from scenario import scenario_TheCabin
+
+class Timer:
+    def __init__(self, step) -> None:
+        self.time = 0
+        self.step = step
+        
+    
+    def Tick(self):
+        self.time += self.step
+
+class Player(Actor):
+    def __init__(self, name: str, desc: dict, location:Location, see: GameObject = None) -> None:
+        super().__init__(name, desc)
+        self.location:Location = location
+        self.see: GameObject = self.location if not see else see
 
 class Game:
-    def __init__(self, networkagent:NetworkAgent, winxy: tuple) -> None:
+    def __init__(self, networkagent:NetworkAgent) -> None:
         self.networkagent:NetworkAgent = networkagent
-        self.winxySCALE = winxy[2]
-        self.winxy:tuple = (winxy[0] * self.winxySCALE, winxy[1]*self.winxySCALE)
-        self.window = pygame.display.set_mode(self.winxy)
-        pygame.display.set_caption("Game")
-        pygame.font.init()
-        
-        self.scene = scenario1()
-        
-        FONTSIZE = 24
-        self.font = pygame.font.SysFont("monospace", int(16))
-        self.clock = pygame.time.Clock()
-        self.gameloop = True
-        while self.gameloop:
-            self.clock.tick(60)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.gameloop = False
-                    pygame.quit()
-            
-            self.Update()
-            self.Draw()
+        self.debug = ""
+        self.input_suggest = ""
+        self.input = ""
+        self.input_response = ""
+        self.timer = Timer(0.1)
 
+        self.scenario = scenario_TheCabin(self)
+        self.player = Player("player", {"player": "Person"}, list(self.scenario.container.values())[0])
+        self.player.location.append(self.player)
+        
+
+        self.game_loop = True
+        while self.game_loop:
+            self.Draw()
+            self.Update()
+
+        print('\033[?25h')
+        os.system('cls')
+
+    def setResponse(self, response):
+        self.input_response = response
+        return self.input_response
+    
     def Draw(self):
-        self.window.fill(rect=(0,0, self.winxy[0], self.winxy[1]),color=(0,0,0))
-        pygame.draw.rect(self.window, (50, 50 ,50), (self.winxy[0]/self.winxySCALE, self.winxy[1]-4*(self.winxy[1]/self.winxySCALE), self.winxy[0]-2*(self.winxy[0]/self.winxySCALE), 3*self.winxy[1]/self.winxySCALE))
-        self.scene.Draw(self.window, self.font)
-        pygame.display.update()
+        #time.sleep(self.timer.step)
+        self.timer.Tick()
+        os.system('cls')
+        print(self.player.see.Draw(), end="\n\n")
+        print(self.input_response)
+        print(f"\n> {self.input}", end=f"{f'{'\033[107m'} {'\033[0m'}'}{'\n'}{'\033[?25l'}") #'\033[?25h'
+        print(self.debug)
 
     def Update(self):
-        keys = pygame.key.get_pressed()
-
-class GameObject:
-    def __init__(self, name:str, desc:dict) -> None:
-        self.name:str = name
-        self.desc:dict = desc
-        self.order = 99
-    pass
-
-class Location(GameObject):
-    def __init__(self, name: str, desc: dict) -> None:
-        super().__init__(name, desc)
-        self.order = 0
-        self.props:dict={}
-        self.items:dict={}
-        self.actors:dict={}
-
-    def append(self, gameobject: GameObject, key = None):
-        key = gameobject.name if not key else None
-        if isinstance(gameobject, GameObject):
-            if isinstance(gameobject, Prop):
-                self.props.update({key: gameobject})
-            if isinstance(gameobject, Item):
-                self.items.update({key: gameobject})
-            if isinstance(gameobject, Actor):
-                self.actors.update({key: gameobject})
-
-    def remove(self, gameobject: GameObject):
-        if isinstance(gameobject, GameObject):
-            if isinstance(gameobject, Prop):
-                self.props.pop(gameobject.name)
-            if isinstance(gameobject, Item):
-                self.items.pop(gameobject.name)
-            if isinstance(gameobject, Actor):
-                self.actors.pop(gameobject.name)
-
-class Prop(GameObject):
-    def __init__(self, name: str, desc: dict, use) -> None:
-        super().__init__(name, desc)
-        self.order = 1
-        self.use = use
-
-class Item(Prop):
-    def __init__(self, name: str, desc: dict, use) -> None:
-        super().__init__(name, desc, use)
-        self.order = 2
-    pass
-
-class Actor(GameObject):
-    def __init__(self, name: str, desc: dict) -> None:
-        super().__init__(name, desc)
-        self.order = 3
-    pass
-
-class Scene:
-    def __init__(self, player: Actor, location: Location) -> None:
-        self.player:Actor = player
-        self.location:Location = location
-
-    def go(self, location: Location):
-        self.location = location
-
-    def Draw(self, canvas, font):
-        #self.font.render('TEXT RENDER', True, (255,255,255))
-        #self.window.blit(text, (20, 20))
-        x = y = s = 16
-        texts = []
-        scenetitle = font.render(f'{self.location.name}{self.location.desc}', True, (255,255,255))
-        canvas.blit(scenetitle, (x, y))
-        y+=s
-        #scenedescription = font.render(f'{self.location.name}', True, (255,255,255))
-        #canvas.blit(scenetitle, (x, y))
-        #y+=s
-        for k,v in self.location.props.items()|self.location.items.items()|self.location.actors.items():
-            text = font.render(f'{k}: {v.desc}', True, (255,255,255))
-            canvas.blit(text, (x, y))
-            y+=s
-            texts.append(text)
+        key = None
+        waitforkey = True
+        while waitforkey:
+            try:
+                if msvcrt.kbhit():
+                    waitforkey = False
+                    key = msvcrt.getch()
+            except KeyboardInterrupt:
+                waitforkey = False
+                self.game_loop = False
+                return
         
+        self.debug = key
+        if key in b'qwertyuiopasdfghjklzxcvbnm !?"':
+            self.input+= key.decode()
+        
+        if key in b'123456789KHMP':
+            if key == b'1': self.input+="one"
+            if key == b'2': self.input+="two"
+            if key == b'3': self.input+="three"
+            if key == b'4': self.input+="four"
+            if key == b'5': self.input+="five"
+            if key == b'6': self.input+="six"
+            if key == b'7': self.input+="seven"
+            if key == b'8': self.input+="eight"
+            if key == b'9': self.input+="nine"
+            if key == b'0': self.input+="zero"
 
-def pack(key, value):
-    return {key:value}
+            if key == b'H': self.input+="north"
+            if key == b'P': self.input+="south"
+            if key == b'K': self.input+="west"
+            if key == b'M': self.input+="east"
 
+        if key in [b'\x08']:
+            self.input = self.input[:-1]
+        if key in [b'\t']:
+            pass
+        if key in [b'\r']:
+            self.debug = self.Actions(self.input)
+            self.input = ""
 
-def scenario1():
-    location_Outside = Location("Outside", {"outside": "dark and cold"})
-    location_Outside.append(Prop("Tree", {"leaves": "Green", "branches": "sturdy"}, lambda: print(f"{scene.player.name} Climbs on Tree")))
-    location_Outside.append(Prop("House", {"Door": "Green", "Inside": "Homely"}, lambda: scene.go(location_House)))
+    ACTION_CMD_USE = ['use', 'go']
+    ACTION_CMD_SEE = ['see', 'inspect']
+    ACTION_CMD_WAIT = [' ', 'wait']
+    ACTION_CMDS = ACTION_CMD_USE+ACTION_CMD_SEE+ACTION_CMD_WAIT
+    def Actions(self, commandargs):
+        self.input_response = ""
+        commandargs = commandargs.split(' ')
+        command, args = (commandargs[0], commandargs[1:])
+        
+        if command not in self.ACTION_CMDS:
+            self.ActionResponse(f"{self.player.name} can't '{command}'")
+            return (False, "NOT IN CMDS")
 
-    location_House = Location("House", {"Room": "warm and cozy"})
-    location_House.append(Prop("Chair", {"Chair": "wooden"}, lambda: print(f"{scene.player.name} Sits on Chair")))
-    location_House.append(Prop("Door", {"Door": "Green", "Outside": "Cold and Dark"}, lambda: scene.go(location_Outside)))
+        if command in self.ACTION_CMD_USE:
+            args.insert(0, self.player.location.name)
+            go: Prop = self.scenario.getgo(args)
+            if isinstance(go, Prop):
+                #self.ActionResponse(f"{self.player.name} used {go.name}")
+                go.Use()
+                return (True, f"USED {go.name}")
+            else:
+                self.ActionResponse(f"{self.player.name} can't use {go.name.capitalize() if go else "'nothing'"}")
+                return (False, "UNUSABLE")
+            
+        if command in self.ACTION_CMD_SEE:
+            args.insert(0, self.player.location.name)
+            go = self.scenario.getgo(args) if args else self.player.location
+            if go:
+                self.player.see = go
 
+                self.ActionResponse(f"{self.player.name} inspects {go.name}")
+                return (True, f"CAN SEE {go.name}")
+            else:
+                self.ActionResponse(f"{self.player.name} can't inspect {",".join(args)}")
+                return (False, f"CAN'T SEE {args}")
 
-    scene = Scene(Actor("Player", {"player": "Person"}), location_Outside)
-    return scene
+        self.ActionResponse(f"{self.player.name} was idle")
+        return (False, "NOT ACTIVATED")
+
+    def ActionMove(self, gokey: list, destinationkey: list):
+        go = self.scenario.getgo(gokey)
+        source = self.scenario.getgo(gokey[:-1])
+        destination = self.scenario.getgo(destinationkey)
+        destination.append(source.remove(go))
+        if go==self.player:
+            self.player.location = destination
+            self.player.see = destination
+            self.ActionResponse(f"{self.player.name} moved to {destination.name}")
+            return
+
+        self.ActionResponse(f"{go} was moved to {destination}")
+
+    def ActionSee(self, gokey = None):
+        go = self.scenario.getgo(gokey) if gokey else self.player.location
+        self.player.see = go
+
+        self.ActionResponse(f"{self.player.name} inspects {go.name}")
+
+    def ActionResponse(self, response):
+        self.input_response = response
