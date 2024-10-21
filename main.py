@@ -25,16 +25,15 @@ def main():
         while inp not in CMD_CLIENT+CMD_HOST+CMD_OFFLINE:
             print(f"Invalid input '{inp}' try {CMD_CLIENT} OR {CMD_HOST} OR {CMD_OFFLINE}") if inp else None
             inp = input("> ").lower()
-
         if inp in CMD_CLIENT:
             networkagent = Client()            
         if inp in CMD_HOST:
             networkagent = Server()
         if inp in CMD_OFFLINE:
             networkagent = NetworkAgent()
-
         SCALE = 75
-        game = Game(networkagent, (16, 9, SCALE))
+        game = Game(networkagent)
+        #game = Game2d(networkagent, (16, 9, SCALE))
     except KeyboardInterrupt:
         exit(0)
 
