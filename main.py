@@ -21,7 +21,8 @@ def main():
     networkagent: NetworkAgent
     os.system('cls' if os.name == 'nt' else 'clear')
     settitle('Main Menu')
-    print(f"{'\033[?25h'}Main Menu:\n|-Join\n|-Host\n|-Offline")
+    print('\033[?25h')
+    print(f"Main Menu:\n|-Join\n|-Host\n|-Offline")
     
     inp = None
     try:
