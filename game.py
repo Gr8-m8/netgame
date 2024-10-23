@@ -57,7 +57,7 @@ class Game:
             self.Update()
 
         print('\033[?25h')
-        os.system('cls')
+        os.system('cls' if os.name == 'nt' else 'clear')
 
     def setResponse(self, response):
         self.input_response = response
@@ -67,7 +67,7 @@ class Game:
         self.draw = False
         #time.sleep(self.timer.step)
         self.timer.Tick()
-        os.system('cls')
+        os.system('cls' if os.name == 'nt' else 'clear')
         print(self.player.see.Draw(), end="\n\n")
         print(self.action_log, end="")
         print(f"\n> {self.input}", end=f"{f'{'\033[107m'} {'\033[0m'}'}{'\n'}{'\033[?25l'}") #'\033[?25h'
@@ -150,7 +150,7 @@ class Game:
 
         if command in self.ACTION_CMD_STOP:
             print('\033[?25h'+'\033[0m')
-            os.system('cls')
+            os.system('cls' if os.name == 'nt' else 'clear')
             os._exit(0)
 
         if command in self.ACTION_CMD_USE:
