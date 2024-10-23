@@ -1,7 +1,7 @@
 import os
 import pygame
 from networkagent import Server, Client, NetworkAgent
-from game import Game
+from game import Game, CharacterCreator
 
 CMD_CLIENT = ['1', 'connect', 'client', 'join']
 CMD_HOST = ['2', 'host', 'server','start']
@@ -28,20 +28,21 @@ def main():
             if len(args.split('.'))==3 and len(args.split(':')==1): 
                 NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
             os.system(f'title {'Client'}')
-            networkagent = Client()            
+            networkagent = Client         
         if inp in CMD_HOST:
             if len(args.split('.'))==3 and len(args.split(':')==1):
                 NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
             os.system(f'title {'Server'}')
-            networkagent = Server()
+            networkagent = Server
         if inp in CMD_OFFLINE:
             if len(args.split('.'))==3 and len(args.split(':')==1):
                 NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
             os.system(f'title {'Offline'}')
-            networkagent = NetworkAgent()
+            networkagent = NetworkAgent
         SCALE = 75
         #input()
-        game = Game(networkagent)
+        character = CharacterCreator()
+        game = Game(networkagent, character)
         #game = Game2d(networkagent, (16, 9, SCALE))
     except KeyboardInterrupt:
         exit(0)
