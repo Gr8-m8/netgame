@@ -63,7 +63,7 @@ class Game:
         print(self.debug) if DEBUG else None
 
     def Update(self):
-        key = None
+        key = b""
         waitforkey = True
         while waitforkey:
             try:
@@ -74,6 +74,7 @@ class Game:
                 waitforkey = False
                 self.game_loop = False
                 return
+            waitforkey = False
         
         #self.debug = key
         if key in b'qwertyuiopasdfghjklzxcvbnm ,.!?"':
@@ -104,7 +105,7 @@ class Game:
             pass
         if key in [b'\r']:
             self.action_log = ""
-            self.debug = self.networkagent.send(f"{self.input} as {f"{self.player.location} {self.player}"}", self)
+            self.debug = self.networkagent.data_send(f"{self.input} as {f"{self.player.location} {self.player}"}")
             #self.debug = self.Action(data)
             #self.debug = self.Action(f"{self.input} as {f"{self.player.location} {self.player}"}", False)
             self.input = ""

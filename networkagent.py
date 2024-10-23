@@ -1,32 +1,27 @@
 import socket
-from _thread import start_new_thread
 from threading import Thread
-import sys
 import os
+from logger import logger
 
 class NetworkAgent:
     DATAFILE = f"data/connection.data"
     def __init__(self) -> None:
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server, self.port = NetworkAgent.LoadConnectionData()
-        self.address = (self.server, self.port)
+        self.host, self.port = NetworkAgent.LoadConnectionData()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.scenario:str = f"{self.connect()}"
-        self.command:str = ""
-
-    def getscenario(self):
-        return self.scenario
+        self.command = ""
 
     def getCommand(self):
         command = self.command
         self.command = ""
         return command
-    
-    def connect(self, data = None):
-        return data
 
-    def send(self, data, game = None):
-        return game.Action(data) if game else None
+    def data_recive(self):
+        pass
+
+    def data_send(self, data = None):
+        self.command = data if data else None
+        
 
     @staticmethod
     def LoadConnectionData():
@@ -63,82 +58,66 @@ class NetworkAgent:
             datafile.close()
         except: pass
 
+
 class Client(NetworkAgent):
-    def _init__(self) -> None:
+    def __init__(self) -> None:
         super().__init__()
+        self.socket.connect((self.host, self.port))
 
-    def connect(self, data = None):
-        try:
-            self.sock.connect(self.address)
-            DATASCALE = 1
-            #input("connect")
-            return self.sock.recv(2048*DATASCALE).decode()
-        except socket.error as e:
-            print(e)
-        except Exception as e:
-            print(e)
+        Thread(target=self.data_recive, args=(None,)).start()
+        self.data_send(f"join")
 
-    def send(self, data, game = None):
+    def data_recive(self, data = None):
         try:
-            self.sock.send(str.encode(data))
-            DATASCALE = 1
-            reply = self.sock.recv(2048*DATASCALE).decode()
-            self.command = reply
-            return data
-        except socket.error as e:
-            print(e)
-        except Exception as e:
-            print(e)
-        return data
-from scenario import Scenario, scenario_TheCabin
+            while True: #server connection
+                DATASCALE = 1
+                data = self.socket.recv(2048*DATASCALE).decode()
+                if data:
+                    logger.Log(f"got {data}")
+                    if data.startswith("stop"):
+                        os._exit(0)
+                    self.command = data
+        except:
+            print("SERVER DOWN")
+            os._exit(0)
+
+    def data_send(self, data = None):
+        self.socket.send(data.encode()) if data else None
+
+
 class Server(NetworkAgent):
     def __init__(self) -> None:
         super().__init__()
-        self.scenario = ""#scenario_TheCabin()
-        self.clients = list()
+        self.clients = []
 
+        self.socket.bind((self.host, self.port))
+
+        self.socket.listen()
+        print(f"WAITING FOR CLIENT")
+
+        while True: # serverloop
+            cliet_socket, address = self.socket.accept()
+            self.clients.append(cliet_socket)
+            print(f"CONNECTION {address} as {self.clients.index(cliet_socket)}")
+            Thread(target=self.data_recive, args=(cliet_socket,)).start()
+            self.data_send(cliet_socket, f"join {self.clients.index(cliet_socket)}")
+
+    def data_recive(self, client_socket: socket.socket):
         try:
-            self.sock.bind((self.server,self.port))
-        except socket.error as e:
-            print(e)
-            exit(-1)
-
-        self.sock.listen()
-        print("WAITING FOR CLIENT")
-        server_loop = True
-        
-        while server_loop:
-            connection, address = self.sock.accept()
-            self.clients.append(connection)
-            print(f"CONNECT FROM {address} as {self.clients.index(connection)}")
-            start_new_thread(self.TClient, (connection,))
-        
-    def TClient(self, connection: socket.socket):
-        connection.send(str.encode(str(self.clients.index(connection))))
-        client_loop = True
-        while client_loop:
-            try:
+            while True: #client connection
                 DATASCALE = 1
-                data = connection.recv(2048*DATASCALE).decode()
-                if data.startswith("stop"):
-                    sys.exit(1)
-                self.command = data
+                data = client_socket.recv(2048*DATASCALE).decode()
+                if data:
+                    if data.startswith("stop"):
+                        os._exit(0)
+                    print(f"got {data}")
+                    for client in self.clients:
+                        
+                        self.data_send(client, data)
+        except:
+            print(f"CONNECTION END as {self.clients.index(client_socket)}")
+            client_socket.close()
 
-                if not data:
-                    print(f"BREAK CONNECTION as {self.clients.index(connection)}")
-                    self.clients.remove(connection)
-                    client_loop = False
-                    break
-                else:
-                    print(f"DATA: '{data}'")
-                    
-                    #print(f"SEND: {reply}")
-                for client in self.clients:
-                    #client: socket.socket
-                    print(f"sendto {self.clients.index(client)}")
-                    client.sendall(str.encode(f"{self.command}"))
-            except:
-                client_loop = False
-                break
-        print(f"CONNECTION END as {self.clients.index(connection)}")
-        connection.close()
+    def data_send(self, client_socket: socket.socket, data: str = None):
+        client_socket.send(data.encode()) if data else None
+        print(f"send {data} to {self.clients.index(client_socket)}")
