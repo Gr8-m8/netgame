@@ -25,18 +25,18 @@ def main():
             inp:str = inpraw.split(' ')[0]
             args:str = " ".join(inpraw.split(' ')[1:]) if ' ' in inpraw else ""
         if inp in CMD_CLIENT:
-            if len(args.split('.'))==3 and len(args.split(':')==1): pass
-                #NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
+            if len(args.split('.'))==3 and len(args.split(':')==1): 
+                NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
             os.system(f'title {'Client'}')
             networkagent = Client()            
         if inp in CMD_HOST:
-            if len(args.split('.'))==3 and len(args.split(':')==1):pass
-                #NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
+            if len(args.split('.'))==3 and len(args.split(':')==1):
+                NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
             os.system(f'title {'Server'}')
             networkagent = Server()
         if inp in CMD_OFFLINE:
-            if len(args.split('.'))==3 and len(args.split(':')==1):pass
-                #NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
+            if len(args.split('.'))==3 and len(args.split(':')==1):
+                NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
             os.system(f'title {'Offline'}')
             networkagent = NetworkAgent()
         SCALE = 75
