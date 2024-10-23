@@ -70,7 +70,7 @@ class Game:
         os.system('cls' if os.name == 'nt' else 'clear')
         print(self.player.see.Draw(), end="\n\n")
         print(self.action_log, end="")
-        print(f"\n> {self.input}", end=f"\033[107m"+ "\033[0m"+ "\n"+ "\033[?25l") #'\033[?25h'
+        print(f"\n> {self.input}\033[107m \033[0m \033[?25l") #'\033[?25h'
         print(self.debug) if DEBUG else None
 
     def Update(self):
