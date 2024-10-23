@@ -1,15 +1,21 @@
+import json
+#from game import Game
 from gameobject import GameObject, Location, Prop, Actor
 
 class Scenario(GameObject):
+    DATAPATH = "data/"
     def __init__(self, name: str, desc: dict) -> None:
         super().__init__(name, desc)
 
-    def move(self, object: GameObject, source: GameObject, destination: GameObject):
-        destination.append(source.remove(object))
+    def Save(self):
+        try:
+            datafile = open(f"{self.DATAPATH}{"_".join(self.name.split(' '))}.scenario", "w")
+            datafile.writelines(self.toJSON())
+            datafile.close()
+        except: pass
 
-    def use(self, object: Prop):
-        if isinstance(object, Prop):
-            object.Use()
+    def Load(self):
+        pass
 
 def scenario_TheCabin(game):
     scenario = Scenario("The Cabin", {"desc":"You are lost on a cold night and find a cabin"})
@@ -17,12 +23,12 @@ def scenario_TheCabin(game):
     scenario.append(Location("outside", {"outside": "dark and cold"}))
     scenario.append(Location("house", {"room": "warm and cozy"}))
     
-    scenario.getgo(['outside']).append(Prop("tree", {"leaves": "Green", "branches": "sturdy"}, lambda: game.ActionResponse(f"{game.player.name} climbs on Tree")))
-    scenario.getgo(['outside']).append(Prop("house", {"inside": "Homely"}, lambda: None))
-    scenario.getgo(['outside', "house"]).append(Prop("door", {"color": "Green"}, lambda: game.ActionMove(['outside', game.player.name], ['house'])))
-    scenario.getgo(['outside', "house", "door"]).append(Prop("window", {"glass": "Green"}, None))
+    scenario.getgo(['outside']).append(Prop("tree", {"leaves": "Green", "branches": "sturdy"}, lambda target, actor: game.ActionLog(f"{actor} climbs on Tree")))
+    scenario.getgo(['outside']).append(Prop("house", {"inside": "Homely"}, lambda target, actor: game.ActionLog(f"The house has a Door that can be Used")))
+    scenario.getgo(['outside', "house"]).append(Prop("door", {"color": "Green"}, lambda target, actor: game.Action(f"move {f"outside {actor}"} on {"house"} as {f"outside {actor}"}")))
+    scenario.getgo(['outside', "house", "door"]).append(Prop("window", {"glass": "Green"}, lambda target, actor: None))
 
-    scenario.getgo(['house']).append(Prop("chair", {"chair": "wooden"}, lambda: game.ActionResponse(f"{game.player.name} sits on Chair")))
-    scenario.getgo(['house']).append(Prop("door", {"door": "Green", "outside": "Cold and Dark"}, lambda: game.ActionMove(['house', game.player.name], ['outside'])))
+    scenario.getgo(['house']).append(Prop("chair", {"chair": "wooden"}, lambda target, actor: game.ActionLog(f"{actor} sits on Chair")))
+    scenario.getgo(['house']).append(Prop("door", {"door": "Green", "outside": "Cold and Dark"}, lambda target, actor: game.Action(f"move {f"house {actor}"} on {"outside"} as {f"house {actor}"}")))
 
     return scenario

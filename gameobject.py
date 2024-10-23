@@ -1,19 +1,21 @@
+import json
+
 class GameObject:
     def __init__(self, name:str, desc:dict) -> None:
         self.name:str = name
         self.desc:dict = desc
         self.container: dict = {}
-        self.order = 99
+        self.type = GAMEOBJECT
     
     def __str__(self):
-        return {self.name: self}
+        return self.name
     
     def append(self, gameobject: "GameObject"):
         key = gameobject.name
         self.container.update({key: gameobject})
 
-    def remove(self, gameobject: "GameObject", key: str = None):
-        key = gameobject.name if not key else None
+    def remove(self, gameobject: "GameObject"):
+        key = gameobject.name
         return self.container.pop(key)
     
     def getgo(self, key:list):
@@ -28,7 +30,7 @@ class GameObject:
     def Update(self):
         pass
 
-    def Draw(self, indent = 1):
+    def Draw(self, indent = 0):
         retur = f"{self.name.capitalize()}: {", ".join([f"{k.capitalize()} is {v}" for k, v in self.desc.items()])}"
         items = self.container.values()
         if len(items)>0:
@@ -39,27 +41,54 @@ class GameObject:
                 retur += '\n' if go.name != list(self.container)[-1] else ""
             
         return retur
+    
+    def toJSON(self):
+        key = self.name
+        value = {
+            "type": self.type[0],
+            "name": self.name,
+            "desc": self.desc,
+            "container": [{i.toJSON()} for i in self.container.values()]
+        }
+        return json.dumps(f"{key}:{value}", indent=4,)
+
+    @staticmethod
+    def fromJSON(self, dataraw):
+        data = json.load(dataraw)
+        type = data['type']
+        name = data['name']
+        desc = json.loads(data['desc'])
+        container = {}
+        [container.update({k: v.fromJSON()}) for k, v in json.load(data['container'])]
+        
+        
         
 
 class Location(GameObject):
     def __init__(self, name: str, desc: dict) -> None:
         super().__init__(name, desc)
-        self.order = 0
+        self.type = LOCATION
 
 class Prop(GameObject):
     def __init__(self, name: str, desc: dict, use) -> None:
         super().__init__(name, desc)
-        self.order = 1
+        self.type = PROP
         self.Use = use
 
 class Item(Prop):
     def __init__(self, name: str, desc: dict, use) -> None:
         super().__init__(name, desc, use)
-        self.order = 2
+        self.type = ITEM
     pass
 
 class Actor(GameObject):
     def __init__(self, name: str, desc: dict) -> None:
         super().__init__(name, desc)
-        self.order = 3
+        self.type = ACTOR
     pass
+
+GAMEOBJECT = ("GameObject", GameObject)
+LOCATION = ("Location", Location)
+PROP = ("Prop", Prop)
+ITEM = ("Item", Item)
+ACTOR = ("Actor", Actor)
