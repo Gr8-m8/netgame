@@ -65,7 +65,7 @@ class Client(NetworkAgent):
         self.socket.connect((self.host, self.port))
 
         Thread(target=self.data_recive, args=(None,)).start()
-        self.data_send(f"join")
+        #self.data_send(f"join")
 
     def data_recive(self, data = None):
         try:
@@ -89,6 +89,7 @@ class Server(NetworkAgent):
     def __init__(self) -> None:
         super().__init__()
         self.clients = []
+        self.addlogg = []
 
         self.socket.bind((self.host, self.port))
 
@@ -100,23 +101,27 @@ class Server(NetworkAgent):
             self.clients.append(cliet_socket)
             print(f"CONNECTION {address} as {self.clients.index(cliet_socket)}")
             Thread(target=self.data_recive, args=(cliet_socket,)).start()
-            self.data_send(cliet_socket, f"join {self.clients.index(cliet_socket)}")
+            for data in self.addlogg:
+                self.data_send(cliet_socket, data)
 
     def data_recive(self, client_socket: socket.socket):
         try:
-            while True: #client connection
+            client_loop = True
+            while client_loop: #client connection
                 DATASCALE = 1
                 data = client_socket.recv(2048*DATASCALE).decode()
                 if data:
                     if data.startswith("stop"):
-                        os._exit(0)
+                        client_loop=False
+                    if data.startswith("add"):self.addlogg.append(data)
                     print(f"got {data}")
                     for client in self.clients:
-                        
                         self.data_send(client, data)
         except:
             print(f"CONNECTION END as {self.clients.index(client_socket)}")
             client_socket.close()
+        
+        os._exit(0)
 
     def data_send(self, client_socket: socket.socket, data: str = None):
         client_socket.send(data.encode()) if data else None
