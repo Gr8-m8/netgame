@@ -1,6 +1,5 @@
 import os
 import sys
-import pygame
 from networkagent import Server, Client, NetworkAgent
 from game import Game, CharacterCreator
 
