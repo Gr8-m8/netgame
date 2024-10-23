@@ -23,9 +23,13 @@ class Player(Actor):
         self.location:Location = location
         self.see: GameObject = self.location if not see else see
 
+def CharacterCreator(name = None):
+    name = input(f"Character Name:\n> ") if not name else name
+    return Player(name=name, desc={f"{name}": "Person"}, location=None)
+
 class Game:
-    def __init__(self, networkagent:NetworkAgent) -> None:
-        self.networkagent:NetworkAgent = networkagent
+    def __init__(self, networkagent:NetworkAgent, player: Player) -> None:
+        self.networkagent:NetworkAgent = networkagent()
         self.debug = ""
         self.input_suggest = ""
         self.input_cursor = 0
@@ -37,13 +41,19 @@ class Game:
         self.scenario:Scenario = scenario_TheCabin(self) #networkagent.connect(scenario_TheCabin(self))
         #self.scenario.Save()
 
-        self.player = Player("player", {"player": "Person"}, list(self.scenario.container.values())[0])
-        self.player.location.append(self.player)
+        self.player = player #Player("player", {"player": "Person"}, list(self.scenario.container.values())[0])
+        self.player.location = list(self.scenario.container.values())[0]
+        self.player.see = self.player.location
+        self.networkagent.data_send(f"add {player.name} on {list(self.scenario.container.values())[0]} as PLAYER")
+        lobby = True
+        #self.ActionAdd
+        #networkagent.getCommand()
+        #self.player.location.append(self.player)
         
 
         self.game_loop = True
         while self.game_loop:
-            self.Draw()
+            #self.Draw() if self.draw else None
             self.Update()
 
         print('\033[?25h')
@@ -54,6 +64,7 @@ class Game:
         return self.input_response
     
     def Draw(self):
+        self.draw = False
         #time.sleep(self.timer.step)
         self.timer.Tick()
         os.system('cls')
@@ -63,19 +74,16 @@ class Game:
         print(self.debug) if DEBUG else None
 
     def Update(self):
+        systemcommand = self.networkagent.getCommand()
         key = b""
-        waitforkey = True
-        while waitforkey:
-            try:
-                if msvcrt.kbhit():
-                    waitforkey = False
-                    key = msvcrt.getch()
-            except KeyboardInterrupt:
-                waitforkey = False
-                self.game_loop = False
-                return
-            waitforkey = False
-        
+        try:
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+        except KeyboardInterrupt:
+            self.game_loop = False
+            return
+        if key in b'' and not systemcommand:
+            return False
         #self.debug = key
         if key in b'qwertyuiopasdfghjklzxcvbnm ,.!?"':
             self.input+= key.decode()
@@ -110,16 +118,18 @@ class Game:
             #self.debug = self.Action(f"{self.input} as {f"{self.player.location} {self.player}"}", False)
             self.input = ""
             
-
-        systemcommand = self.networkagent.getCommand()
         self.debug = self.Action(systemcommand) if systemcommand else None
+        self.Draw()
 
+    ACTION_CMD_STOP = ['stop']
     ACTION_CMD_MOVE = ['move', 'go']
+    ACTION_CMD_ADD = ['add']
+    ACTION_CMD_JOIN = ['join']
     ACTION_CMD_USE = ['use']
     ACTION_CMD_SEE = ['see', 'inspect']
     ACTION_CMD_WAIT = [' ', 'wait']
     ACTION_CMD_SAY = ['say']
-    ACTION_CMDS = ACTION_CMD_MOVE+ACTION_CMD_USE+ACTION_CMD_SEE+ACTION_CMD_WAIT+ACTION_CMD_SAY
+    ACTION_CMDS = ACTION_CMD_STOP+ACTION_CMD_MOVE+ACTION_CMD_ADD+ACTION_CMD_JOIN+ACTION_CMD_USE+ACTION_CMD_SEE+ACTION_CMD_WAIT+ACTION_CMD_SAY
     def Action(self, commandargs:str):
         TARGET = 'on'
         ACTOR = 'as'
@@ -133,9 +143,15 @@ class Game:
         targetkey = [i for i in targetkey if i] if targetkey else None
         actorkey: list = commandargs.split(ACTOR)[1].split(TARGET)[0].split(' ')[1:] if ACTOR in commandargs else None
         actorkey = [i for i in actorkey if i] if actorkey else None
+        actor = self.scenario.getgo(actorkey) if actorkey else None
         if command not in self.ACTION_CMDS:
-            self.ActionLog(f"{self.player.name} can't '{command}'")
+            self.ActionLog(f"{actor} can't '{command}'")
             return (False, "NOT IN CMDS")
+
+        if command in self.ACTION_CMD_STOP:
+            print('\033[?25h'+'\033[0m')
+            os.system('cls')
+            os._exit(0)
 
         if command in self.ACTION_CMD_USE:
             if gokey and actorkey:
@@ -145,17 +161,24 @@ class Game:
             if actorkey:
                 return self.ActionSee(gokey=gokey, actorkey=actorkey)
 
-        if command in self.ACTION_CMD_MOVE:# and isSystem:
+        if command in self.ACTION_CMD_MOVE:
             if gokey and targetkey and actorkey:
                 return self.ActionMove(gokey=gokey, destinationkey=targetkey, actorkey=actorkey)
-            return (False, ("gokey", gokey, "target", targetkey, "actor", actorkey))
+        
+        if command in self.ACTION_CMD_ADD:
+            if gokey and targetkey and actorkey:
+                return self.ActionAdd(gokey, targetkey, actorkey)
+            
+        if command in self.ACTION_CMD_JOIN:
+            if gokey and targetkey and actorkey:
+                return self.ActionJoin(targetkey, gokey)
         
         if command in self.ACTION_CMD_SAY:
             if gokey and actorkey:
                 return self.ActionLog(self.ActionSay(gokey, actorkey))
 
 
-        self.ActionLog(f"{self.player.name} was idle")
+        self.ActionLog(f"{actor} was idle")
         return (False, "NOT ACTIVATED", (command, gokey, targetkey, actorkey))
 
     def ActionUse(self, gokey: list, targetkey:list, actorkey: list):
@@ -176,7 +199,7 @@ class Game:
         gokey = actorkey[:-1]+gokey[:] 
         go = self.scenario.getgo(gokey) #if gokey[-1]=='' else self.scenario.getgo(self.player.location)
         
-        if actor == self.player:
+        if actor.name == self.player.name:
             if go:
                 self.player.see = go
                 self.ActionLog(f"{self.player} inspects {go}")
@@ -185,7 +208,7 @@ class Game:
                 self.ActionLog(f"{self.player} can't inspect {go if go else "'nothing'"}")
                 return (False, f"CAN'T SEE {go}", ("gokey", gokey, "actorkey", actorkey))
         else:
-            self.ActionLog(f"{self.player} inspects {go}")
+            self.ActionLog(f"{actor} inspects {go}")
             return (True, f"{actor} CAN SEE {go}", ("gokey", gokey, "actorkey", actorkey))
 
     def ActionMove(self, gokey: list, destinationkey: list, actorkey: list):
@@ -195,13 +218,18 @@ class Game:
         if not (destination and source and go): return (False, ("gokey", gokey), "source", gokey[-1], "destination", destinationkey)
         destination.append(source.remove(go)) 
 
-        if go==self.player:
+        if go.name==self.player.name:
             self.player.location = destination
             self.player.see = destination
             self.ActionLog(f"{self.player} moved to {destination}")
         else:
             self.ActionLog(f"{go} was moved to {destination}")
         #self.networkagent.send(f'move {" ".join(gokey)} on {" ".join(destinationkey)} as {" ".join(actorkey)}')
+
+    def ActionAdd(self, data:str, locationkey:str, type:str):
+        location = self.scenario.getgo(locationkey)
+        go = GameObject(name=data[0], desc={"type":f"{type[0]}"})
+        location.append(go)
 
     def ActionSay(self, message, actorkey):
         actor = self.scenario.getgo(actorkey)
