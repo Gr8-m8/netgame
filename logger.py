@@ -9,7 +9,7 @@ class Logger:
 
 
     def Log(self, data):
-        savefile = open(f"{DATAPATH}{Logger.DATAFILE}", "w")
+        savefile = open(f"{DATAPATH}{Logger.DATAFILE}", "a")
         savefile.write(data)
         savefile.close()
 
