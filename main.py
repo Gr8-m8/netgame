@@ -11,8 +11,8 @@ CMD_OFFLINE = ['3', 'offline']
 DATAPATH = "data/"
 
 def settitle(title = ""):
-    os.system(f'title {title}')
-    sys.stdout.write(f"\x1b]2;{title}\x07")
+    os.system(f'title {title}') if os.name == 'nt' else None
+    sys.stdout.write(f"\x1b]2;{title}\x07") if not os.name == 'nt' else None
 
 def main():
     def __init__(self):
@@ -20,7 +20,7 @@ def main():
 
     networkagent: NetworkAgent
     os.system('cls' if os.name == 'nt' else 'clear')
-    os.system(f'title {'Main Menu'}')
+    settitle('Main Menu')
     print(f"{'\033[?25h'}Main Menu:\n|-Join\n|-Host\n|-Offline")
     
     inp = None
