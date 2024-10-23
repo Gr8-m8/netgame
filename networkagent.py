@@ -1,5 +1,6 @@
 import socket
 from _thread import start_new_thread
+from threading import Thread
 import sys
 import os
 
@@ -93,8 +94,8 @@ from scenario import Scenario, scenario_TheCabin
 class Server(NetworkAgent):
     def __init__(self) -> None:
         super().__init__()
-        self.playersNum = 0
-        self.scenario = scenario_TheCabin()
+        self.scenario = ""#scenario_TheCabin()
+        self.clients = list()
 
         try:
             self.sock.bind((self.server,self.port))
@@ -103,36 +104,41 @@ class Server(NetworkAgent):
             exit(-1)
 
         self.sock.listen()
-        print("Server Set Up")
+        print("WAITING FOR CLIENT")
         server_loop = True
         
         while server_loop:
             connection, address = self.sock.accept()
-            print(f"CONNECT FROM {address}")
-            start_new_thread(self.TClient, (connection, self.playersNum, self))
-            self.playersNum += 1
+            self.clients.append(connection)
+            print(f"CONNECT FROM {address} as {self.clients.index(connection)}")
+            start_new_thread(self.TClient, (connection,))
         
-
-    def TClient(self, connection: socket.socket, playerID:int):
-        connection.send(str.encode(str(playerID)))
+    def TClient(self, connection: socket.socket):
+        connection.send(str.encode(str(self.clients.index(connection))))
         client_loop = True
         while client_loop:
             try:
                 DATASCALE = 1
                 data = connection.recv(2048*DATASCALE).decode()
+                if data.startswith("stop"):
+                    sys.exit(1)
                 self.command = data
 
                 if not data:
-                    print("BREAK CONNECTION")
+                    print(f"BREAK CONNECTION as {self.clients.index(connection)}")
+                    self.clients.remove(connection)
                     client_loop = False
                     break
                 else:
                     print(f"DATA: '{data}'")
                     
                     #print(f"SEND: {reply}")
-                connection.sendall(str.encode(f"{self.command}"))
+                for client in self.clients:
+                    #client: socket.socket
+                    print(f"sendto {self.clients.index(client)}")
+                    client.sendall(str.encode(f"{self.command}"))
             except:
                 client_loop = False
                 break
-        print("CONNECTION END")
+        print(f"CONNECTION END as {self.clients.index(connection)}")
         connection.close()
