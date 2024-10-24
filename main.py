@@ -46,7 +46,8 @@ def main():
             networkagent = NetworkAgent
         SCALE = 75
         #input()
-        character = CharacterCreator()
+
+        character = CharacterCreator("Server" if networkagent == Server else None)
         game = Game(networkagent, character)
         #game = Game2d(networkagent, (16, 9, SCALE))
     except KeyboardInterrupt:
