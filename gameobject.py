@@ -12,17 +12,11 @@ class GameObject:
     
     def append(self, gameobject: "GameObject"):
         key = gameobject.name
-        try:
-            self.container.update({key: gameobject})
-        except Exception as e:
-            print(e)
+        self.container.update({key: gameobject})
 
     def remove(self, gameobject: "GameObject"):
         key = gameobject.name
-        try:
-            return self.container.pop(key)
-        except Exception as e:
-            print(e)
+        return self.container.pop(key)
     
     def getgo(self, key:list):
         gameobject: GameObject = None

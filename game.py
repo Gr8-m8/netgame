@@ -8,11 +8,17 @@ except: pass
 try:
     import termios
     import tty
+    import fcntl
 except: pass
+import selectors
 
 from networkagent import NetworkAgent
 from gameobject import GameObject, Location, Prop, Item, Actor
 from scenario import Scenario, scenario_TheCabin
+
+try:
+    oset = termios.tcgetattr(sys.stdin)
+except: pass
 
 def iswindows():
     return True if os.name == 'nt' else False
@@ -57,18 +63,27 @@ class Game:
         self.player.see = self.player.location
         self.networkagent.data_send(f"add {player.name} on {list(self.scenario.container.values())[0]} as PLAYER")
         lobby = True
-        #self.ActionAdd
-        #networkagent.getCommand()
-        #self.player.location.append(self.player)
         
 
-        self.game_loop = True
-        while self.game_loop:
-            #self.Draw() if self.draw else None
-            self.Update()
+        try:
+            self.game_loop = True
+            while self.game_loop:
+                #self.Draw() #if not iswindows() else None
+                self.Update()
+        except:
+            self.Exit("GAME LOOP FAIL")
 
         print('\033[?25h')
         os.system('cls' if os.name == 'nt' else 'clear')
+
+    def Exit(self, reason: str = None):
+        try:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oset)
+        except: pass
+        print('\033[?25h'+'\033[0m')
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(reason) if reason else None
+        os._exit(0)
 
     def setResponse(self, response):
         self.input_response = response
@@ -91,18 +106,18 @@ class Game:
             if iswindows():
                 if msvcrt.kbhit(): key = msvcrt.getch()
             else:
-                oset = termios.tcgetattr(sys.stdin)
-                tty.setcbreak(sys.stdin)
-                key = 0
-                key = sys.stdin.read(1)[0]
-                key = key.encode()
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oset)
-        except KeyboardInterrupt:
-            self.game_loop = False
-            return
+                def iskey():
+                    return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
+                #time.sleep(0.1)
+                tty.setcbreak(sys.stdin.fileno())
+                if iskey():
+                    key = sys.stdin.read(1).encode()
+        except:
+            print("OS INPUT FAIL")
+            self.Exit()
         if key in b'' and not systemcommand:
             return False
-        self.debug = key
+        #self.debug = sys.stdin.fileno()
         if key in b'qwertyuiopasdfghjklzxcvbnm ,.!?"':
             self.input+= key.decode()
         
@@ -132,6 +147,9 @@ class Game:
         if key in [b'\r', b'\n']:
             self.action_log = ""
             self.networkagent.data_send(f"{self.input} as {f'{self.player.location} {self.player}'}")
+            self.input = ""
+
+        if key in [b'\x1b']:
             self.input = ""
             
         self.Action(systemcommand) if systemcommand else None
@@ -165,9 +183,7 @@ class Game:
             return (False, "NOT IN CMDS")
 
         if command in self.ACTION_CMD_STOP:
-            print('\033[?25h'+'\033[0m')
-            os.system('cls' if os.name == 'nt' else 'clear')
-            os._exit(0)
+            self.Exit("Stop")
 
         if command in self.ACTION_CMD_USE:
             if gokey and actorkey:
