@@ -4,7 +4,11 @@ import time
 import os
 try:
     import msvcrt
-except:pass
+except: pass
+try:
+    import termios
+    import tty
+except: pass
 
 from networkagent import NetworkAgent
 from gameobject import GameObject, Location, Prop, Item, Actor
@@ -13,7 +17,7 @@ from scenario import Scenario, scenario_TheCabin
 def iswindows():
     return True if os.name == 'nt' else False
 
-DEBUG = False
+DEBUG = True
 
 class Timer:
     def __init__(self, step) -> None:
@@ -87,13 +91,18 @@ class Game:
             if iswindows():
                 if msvcrt.kbhit(): key = msvcrt.getch()
             else:
-                 if select.select([sys.stdin], [], [], 0.1)[0]: key = sys.stdin.readline().strip()
+                oset = termios.tcgetattr(sys.stdin)
+                tty.setcbreak(sys.stdin)
+                key = 0
+                key = sys.stdin.read(1)[0]
+                key = key.encode()
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oset)
         except KeyboardInterrupt:
             self.game_loop = False
             return
         if key in b'' and not systemcommand:
             return False
-        #self.debug = key
+        self.debug = key
         if key in b'qwertyuiopasdfghjklzxcvbnm ,.!?"':
             self.input+= key.decode()
         
@@ -116,16 +125,16 @@ class Game:
         if key == b'K': self.input+="" #LEFT
         if key == b'M': self.input+="" #RIGHT
 
-        if key in [b'\x08']:
+        if key in [b'\x08', b'\x7f']:
             self.input = self.input[:-1]
         if key in [b'\t']:
             pass
-        if key in [b'\r']:
+        if key in [b'\r', b'\n']:
             self.action_log = ""
-            self.debug = self.networkagent.data_send(f"{self.input} as {f'{self.player.location} {self.player}'}")
+            self.networkagent.data_send(f"{self.input} as {f'{self.player.location} {self.player}'}")
             self.input = ""
             
-        self.debug = self.Action(systemcommand) if systemcommand else None
+        self.Action(systemcommand) if systemcommand else None
         self.Draw()
 
     ACTION_CMD_STOP = ['stop']
@@ -197,7 +206,8 @@ class Game:
             go.Use(target, actor)
             return (True, f"{actor} USED {go}")
         else:
-            self.ActionLog(f"{actor} can't use {go if go else '\"nothing\"'}")
+            nothingstr = "'nothing'"
+            self.ActionLog(f"{actor} can't use {go if go else nothingstr}")
             return (False, "UNUSABLE")
 
     def ActionSee(self, gokey: list, actorkey: list):
@@ -211,7 +221,8 @@ class Game:
                 self.ActionLog(f"{self.player} inspects {go}")
                 return (True, f"CAN SEE {go}", ("gokey", gokey, "actorkey", actorkey))
             else:
-                self.ActionLog(f"{self.player} can't inspect {go if go else "'nothing'"}")
+                nothingstr = "'nothing'"
+                self.ActionLog(f"{self.player} can't inspect {go if go else nothingstr}")
                 return (False, f"CAN'T SEE {go}", ("gokey", gokey, "actorkey", actorkey))
         else:
             self.ActionLog(f"{actor} inspects {go}")

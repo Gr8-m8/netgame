@@ -9,7 +9,7 @@ class Scenario(GameObject):
 
     def Save(self):
         try:
-            datafile = open(f"{self.DATAPATH}{"_".join(self.name.split(' '))}.scenario", "w")
+            datafile = open(f"{self.DATAPATH}{'_'.join(self.name.split(' '))}.scenario", "w")
             datafile.writelines(self.toJSON())
             datafile.close()
         except: pass
