@@ -122,9 +122,7 @@ class Game:
             pass
         if key in [b'\r']:
             self.action_log = ""
-            self.debug = self.networkagent.data_send(f"{self.input} as {f"{self.player.location} {self.player}"}")
-            #self.debug = self.Action(data)
-            #self.debug = self.Action(f"{self.input} as {f"{self.player.location} {self.player}"}", False)
+            self.debug = self.networkagent.data_send(f"{self.input} as {f'{self.player.location} {self.player}'}")
             self.input = ""
             
         self.debug = self.Action(systemcommand) if systemcommand else None
@@ -196,11 +194,10 @@ class Game:
         go: Prop = self.scenario.getgo(gokey)
         target: GameObject = self.scenario.getgo(targetkey)
         if isinstance(go, Prop):
-            #self.ActionLog(f"{actor} used {go}")
             go.Use(target, actor)
             return (True, f"{actor} USED {go}")
         else:
-            self.ActionLog(f"{actor} can't use {go if go else "'nothing'"}")
+            self.ActionLog(f"{actor} can't use {go if go else '\"nothing\"'}")
             return (False, "UNUSABLE")
 
     def ActionSee(self, gokey: list, actorkey: list):
@@ -241,7 +238,6 @@ class Game:
 
     def ActionSay(self, message, actorkey):
         actor = self.scenario.getgo(actorkey)
-        #self.networkagent.send(f"say ")
         return f"{actor}: {' '.join(message)}"
 
     def ActionLog(self, log):

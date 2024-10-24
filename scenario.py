@@ -25,10 +25,10 @@ def scenario_TheCabin(game):
     
     scenario.getgo(['outside']).append(Prop("tree", {"leaves": "Green", "branches": "sturdy"}, lambda target, actor: game.ActionLog(f"{actor} climbs on Tree")))
     scenario.getgo(['outside']).append(Prop("house", {"inside": "Homely"}, lambda target, actor: game.ActionLog(f"The house has a Door that can be Used")))
-    scenario.getgo(['outside', "house"]).append(Prop("door", {"color": "Green"}, lambda target, actor: game.Action(f"move {f"outside {actor}"} on {"house"} as {f"outside {actor}"}")))
+    scenario.getgo(['outside', "house"]).append(Prop("door", {"color": "Green"}, lambda target, actor: game.Action(f"move outside {actor} on house as outside {actor}")))
     scenario.getgo(['outside', "house", "door"]).append(Prop("window", {"glass": "Green"}, lambda target, actor: None))
 
     scenario.getgo(['house']).append(Prop("chair", {"chair": "wooden"}, lambda target, actor: game.ActionLog(f"{actor} sits on Chair")))
-    scenario.getgo(['house']).append(Prop("door", {"door": "Green", "outside": "Cold and Dark"}, lambda target, actor: game.Action(f"move {f"house {actor}"} on {"outside"} as {f"house {actor}"}")))
+    scenario.getgo(['house']).append(Prop("door", {"door": "Green", "outside": "Cold and Dark"}, lambda target, actor: game.Action(f"move house {actor} on outside as house {actor}")))
 
     return scenario
