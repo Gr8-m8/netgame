@@ -1,10 +1,17 @@
+import select
+import sys
 import time
 import os
-import msvcrt
+try:
+    import msvcrt
+except:pass
 
 from networkagent import NetworkAgent
 from gameobject import GameObject, Location, Prop, Item, Actor
 from scenario import Scenario, scenario_TheCabin
+
+def iswindows():
+    return True if os.name == 'nt' else False
 
 DEBUG = False
 
@@ -41,7 +48,7 @@ class Game:
         self.scenario:Scenario = scenario_TheCabin(self) #networkagent.connect(scenario_TheCabin(self))
         #self.scenario.Save()
 
-        self.player = player #Player("player", {"player": "Person"}, list(self.scenario.container.values())[0])
+        self.player = player
         self.player.location = list(self.scenario.container.values())[0]
         self.player.see = self.player.location
         self.networkagent.data_send(f"add {player.name} on {list(self.scenario.container.values())[0]} as PLAYER")
@@ -77,8 +84,10 @@ class Game:
         systemcommand = self.networkagent.getCommand()
         key = b""
         try:
-            if msvcrt.kbhit():
-                key = msvcrt.getch()
+            if iswindows():
+                if msvcrt.kbhit(): key = msvcrt.getch()
+            else:
+                 if select.select([sys.stdin], [], [], 0.1)[0]: key = sys.stdin.readline().strip()
         except KeyboardInterrupt:
             self.game_loop = False
             return
@@ -224,7 +233,6 @@ class Game:
             self.ActionLog(f"{self.player} moved to {destination}")
         else:
             self.ActionLog(f"{go} was moved to {destination}")
-        #self.networkagent.send(f'move {" ".join(gokey)} on {" ".join(destinationkey)} as {" ".join(actorkey)}')
 
     def ActionAdd(self, data:str, locationkey:str, type:str):
         location = self.scenario.getgo(locationkey)
@@ -234,7 +242,7 @@ class Game:
     def ActionSay(self, message, actorkey):
         actor = self.scenario.getgo(actorkey)
         #self.networkagent.send(f"say ")
-        return f"{actor}: {" ".join(message)}"
+        return f"{actor}: {' '.join(message)}"
 
     def ActionLog(self, log):
         self.action_log += f"{log}\n"

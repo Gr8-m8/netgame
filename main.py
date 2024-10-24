@@ -14,8 +14,7 @@ def settitle(title = ""):
     sys.stdout.write(f"\x1b]2;{title}\x07") if not os.name == 'nt' else None
 
 def main():
-    def __init__(self):
-        os.makedirs(DATAPATH, exist_ok=True)
+    os.makedirs(DATAPATH, exist_ok=True)
 
     networkagent: NetworkAgent
     os.system('cls' if os.name == 'nt' else 'clear')

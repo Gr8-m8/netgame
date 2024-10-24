@@ -1,1 +1,1 @@
-venv\Scripts\python.exe -m PyInstaller main.py -n "Game" --onefile --collect-submodules "networkingagent.py" --collect-submodules "game.py" --collect-submodules "gameobject.py"  --collect-submodules "scenario.py"
+py -m PyInstaller main.py -n "Game" --onefile --collect-submodules "networkingagent.py" --collect-submodules "game.py" --collect-submodules "gameobject.py"  --collect-submodules "scenario.py"

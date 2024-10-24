@@ -37,7 +37,8 @@ class GameObject:
         pass
 
     def Draw(self, indent = 0):
-        retur = f"{self.name.capitalize()}: {", ".join([f"{k.capitalize()} is {v}" for k, v in self.desc.items()])}"
+        basicdesclist = [f"{k.capitalize()} is {v}" for k, v in self.desc.items()]
+        retur = f"{self.name.capitalize()}: {', '.join(basicdesclist)}"
         items = self.container.values()
         if len(items)>0:
             retur += '\n'

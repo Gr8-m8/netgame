@@ -53,8 +53,8 @@ class NetworkAgent:
 
         try:
             datafile = open(NetworkAgent.DATAFILE, "w")
-            datafile.write(address)
-            datafile.write(port)
+            datafile.write(f"{address}\n{port}")
+            datafile.write()
             datafile.close()
         except: pass
 
