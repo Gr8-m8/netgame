@@ -91,7 +91,11 @@ class Server(NetworkAgent):
         self.clients = []
         self.addlogg = []
 
-        self.socket.bind((self.host, self.port))
+        try:
+            self.socket.bind((self.host, self.port))
+        except Exception as e:
+            print("UNABLE TO OPEN SERVER\n",e)
+            os._exit(-1)
 
         self.socket.listen()
         print(f"WAITING FOR CLIENT")
