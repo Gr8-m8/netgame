@@ -2,25 +2,11 @@ import select
 import sys
 import time
 import os
-try:
-    import msvcrt
-except: pass
-try:
-    import termios
-    import tty
-    import fcntl
-except: pass
-import selectors
 
+from getch import getch
 from networkagent import NetworkAgent
 from gameobject import GameObject, Location, Prop, Item, Actor
 from scenario import Scenario, scenario_TheCabin
-
-from threading import Thread
-
-try:
-    oset = termios.tcgetattr(sys.stdin)
-except: pass
 
 def iswindows():
     return True if os.name == 'nt' else False
@@ -31,8 +17,8 @@ class Timer:
     def __init__(self, step) -> None:
         self.time = 0
         self.step = step
-        
-    
+
+
     def Tick(self):
         self.time += self.step
 
@@ -65,8 +51,7 @@ class Game:
         self.player.see = self.player.location
         self.networkagent.data_send(f"add {player.name} on {list(self.scenario.container.values())[0]} as PLAYER")
         lobby = True
-        
-        Thread(target=self.keyboardThread, args=(None,None)).start()
+
         try:
             self.game_loop = True
             while self.game_loop:
@@ -78,16 +63,7 @@ class Game:
         print('\033[?25h')
         os.system('cls' if os.name == 'nt' else 'clear')
 
-    def keyboardThread(self, k, v):
-        while True:
-            gg = input("")
-            self.action_log = ""
-            self.networkagent.data_send(f"{gg} as {f'{self.player.location} {self.player}'}")
-
     def Exit(self, reason: str = None):
-        try:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oset)
-        except: pass
         print('\033[?25h'+'\033[0m')
         os.system('cls' if os.name == 'nt' else 'clear')
         print(reason) if reason else None
@@ -96,7 +72,7 @@ class Game:
     def setResponse(self, response):
         self.input_response = response
         return self.input_response
-    
+
     def Draw(self):
         self.draw = False
         #time.sleep(self.timer.step)
@@ -104,15 +80,67 @@ class Game:
         os.system('cls' if os.name == 'nt' else 'clear')
         print(self.player.see.Draw(), end="\n\n")
         print(self.action_log, end="")
-        #print(f"\n> {self.input}\033[107m \033[0m \033[?25l") #'\033[?25h'
+        print(f"\n> {self.input}\033[107m \033[0m \033[?25l") #'\033[?25h'
         print(self.debug) if DEBUG else None
-        print("> ", end="") #inpuit
+
+    def keyboard(self):
+        key = getch.readkey()
+
+        if key in b'':
+            return False
+        
+        KEYS_APPEND = b'qwertyuiopasdfghjklzxcvbnm ,.!?"'
+        if key in KEYS_APPEND:
+            self.input+= key.decode()
+            return True
+        
+        KEYS_REPLACE =b'123456789+-'
+        if key in KEYS_REPLACE:
+            if key == b'+': self.input+="plus"
+            if key == b'-': self.input+="minus"
+            if key == b'1': self.input+="one"
+            if key == b'2': self.input+="two"
+            if key == b'3': self.input+="three"
+            if key == b'4': self.input+="four"
+            if key == b'5': self.input+="five"
+            if key == b'6': self.input+="six"
+            if key == b'7': self.input+="seven"
+            if key == b'8': self.input+="eight"
+            if key == b'9': self.input+="nine"
+            if key == b'0': self.input+="zero"
+            return True
+
+        KEYS_ACTIONS_ARROW = [b'H', b'P', b'K', b'M']
+        KEYS_ACTIONS_BACKSPACE = [b'\x08', b'\x7f']
+        KEYS_ACTIONS_TAB = [b'\t']
+        KEYS_ACTIONS_RETURN = [b'\r', b'\n']
+        KEYS_ACTIONS_ESC = [b'\x1b']
+        KEYS_ACTIONS = KEYS_ACTIONS_ARROW+KEYS_ACTIONS_BACKSPACE+KEYS_ACTIONS_TAB+KEYS_ACTIONS_RETURN+KEYS_ACTIONS_ESC
+        if key in KEYS_ACTIONS:
+            if key == b'H': self.input+="" #UP
+            if key == b'P': self.input+="" #DOWN
+            if key == b'K': self.input+="" #LEFT
+            if key == b'M': self.input+="" #RIGHT
+            if key in KEYS_ACTIONS_BACKSPACE:
+                self.input = self.input[:-1]
+            if key in KEYS_ACTIONS_TAB:
+                pass
+            if key in KEYS_ACTIONS_RETURN:
+                self.action_log = ""
+                self.networkagent.data_send(f"{self.input} as {f'{self.player.location} {self.player}'}")
+                self.input = ""
+            if key in KEYS_ACTIONS_ESC:
+                self.input = ""
+            return True
+
 
     def Update(self):
         systemcommand = self.networkagent.getCommand()
-            
+        key = self.keyboard()
+        
+
         self.Action(systemcommand) if systemcommand else None
-        self.Draw() if systemcommand else None
+        self.Draw() if systemcommand or key else None
 
     ACTION_CMD_STOP = ['stop']
     ACTION_CMD_MOVE = ['move', 'go']
@@ -147,7 +175,7 @@ class Game:
         if command in self.ACTION_CMD_USE:
             if gokey and actorkey:
                 return self.ActionUse(gokey=gokey, targetkey=targetkey,actorkey=actorkey)
-        
+
         if command in self.ACTION_CMD_SEE:
             if actorkey:
                 return self.ActionSee(gokey=gokey, actorkey=actorkey)
@@ -155,15 +183,15 @@ class Game:
         if command in self.ACTION_CMD_MOVE:
             if gokey and targetkey and actorkey:
                 return self.ActionMove(gokey=gokey, destinationkey=targetkey, actorkey=actorkey)
-        
+
         if command in self.ACTION_CMD_ADD:
             if gokey and targetkey and actorkey:
                 return self.ActionAdd(gokey, targetkey, actorkey)
-            
+
         if command in self.ACTION_CMD_JOIN:
             if gokey and targetkey and actorkey:
                 return self.ActionJoin(targetkey, gokey)
-        
+
         if command in self.ACTION_CMD_SAY:
             if gokey and actorkey:
                 return self.ActionLog(self.ActionSay(gokey, actorkey))
@@ -189,7 +217,7 @@ class Game:
         actor = self.scenario.getgo(actorkey)
         gokey = actorkey[:-1]+gokey[:] 
         go = self.scenario.getgo(gokey) #if gokey[-1]=='' else self.scenario.getgo(self.player.location)
-        
+
         if actor.name == self.player.name:
             if go:
                 self.player.see = go
@@ -228,4 +256,3 @@ class Game:
 
     def ActionLog(self, log):
         self.action_log += f"{log}\n"
-        return (True, f"LOG: {log}")
