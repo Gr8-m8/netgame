@@ -16,6 +16,8 @@ from networkagent import NetworkAgent
 from gameobject import GameObject, Location, Prop, Item, Actor
 from scenario import Scenario, scenario_TheCabin
 
+from threading import Thread
+
 try:
     oset = termios.tcgetattr(sys.stdin)
 except: pass
@@ -64,7 +66,7 @@ class Game:
         self.networkagent.data_send(f"add {player.name} on {list(self.scenario.container.values())[0]} as PLAYER")
         lobby = True
         
-
+        Thread(target=self.keyboardThread, args=(None,None)).start()
         try:
             self.game_loop = True
             while self.game_loop:
@@ -75,6 +77,12 @@ class Game:
 
         print('\033[?25h')
         os.system('cls' if os.name == 'nt' else 'clear')
+
+    def keyboardThread(self, k, v):
+        while True:
+            gg = input("")
+            self.action_log = ""
+            self.networkagent.data_send(f"{gg} as {f'{self.player.location} {self.player}'}")
 
     def Exit(self, reason: str = None):
         try:
@@ -96,64 +104,15 @@ class Game:
         os.system('cls' if os.name == 'nt' else 'clear')
         print(self.player.see.Draw(), end="\n\n")
         print(self.action_log, end="")
-        print(f"\n> {self.input}\033[107m \033[0m \033[?25l") #'\033[?25h'
+        #print(f"\n> {self.input}\033[107m \033[0m \033[?25l") #'\033[?25h'
         print(self.debug) if DEBUG else None
+        print("> ", end="") #inpuit
 
     def Update(self):
         systemcommand = self.networkagent.getCommand()
-        key = b""
-        try:
-            if iswindows():
-                if msvcrt.kbhit(): key = msvcrt.getch()
-            else:
-                def iskey():
-                    return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
-                #time.sleep(0.1)
-                tty.setcbreak(sys.stdin.fileno())
-                if iskey():
-                    key = sys.stdin.read(1).encode()
-        except:
-            print("OS INPUT FAIL")
-            self.Exit()
-        if key in b'' and not systemcommand:
-            return False
-        #self.debug = sys.stdin.fileno()
-        if key in b'qwertyuiopasdfghjklzxcvbnm ,.!?"':
-            self.input+= key.decode()
-        
-        if key in b'123456789+-':
-            if key == b'+': self.input+="plus"
-            if key == b'-': self.input+="minus"
-            if key == b'1': self.input+="one"
-            if key == b'2': self.input+="two"
-            if key == b'3': self.input+="three"
-            if key == b'4': self.input+="four"
-            if key == b'5': self.input+="five"
-            if key == b'6': self.input+="six"
-            if key == b'7': self.input+="seven"
-            if key == b'8': self.input+="eight"
-            if key == b'9': self.input+="nine"
-            if key == b'0': self.input+="zero"
-
-        if key == b'H': self.input+="" #UP
-        if key == b'P': self.input+="" #DOWN
-        if key == b'K': self.input+="" #LEFT
-        if key == b'M': self.input+="" #RIGHT
-
-        if key in [b'\x08', b'\x7f']:
-            self.input = self.input[:-1]
-        if key in [b'\t']:
-            pass
-        if key in [b'\r', b'\n']:
-            self.action_log = ""
-            self.networkagent.data_send(f"{self.input} as {f'{self.player.location} {self.player}'}")
-            self.input = ""
-
-        if key in [b'\x1b']:
-            self.input = ""
             
         self.Action(systemcommand) if systemcommand else None
-        self.Draw()
+        self.Draw() if systemcommand else None
 
     ACTION_CMD_STOP = ['stop']
     ACTION_CMD_MOVE = ['move', 'go']

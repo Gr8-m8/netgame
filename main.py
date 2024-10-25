@@ -40,7 +40,7 @@ def main():
                 if inpip and inpport:
                     NetworkAgent.SaveConnectionData(inpip, inpport)
 
-                print(f"|{inpip}={len(args.split('.'))}|{inpport}={len(args.split(':'))}|")
+                #print(f"|{inpip}={len(args.split('.'))}|{inpport}={len(args.split(':'))}|")
 
             if inp in CMD_CLIENT:
                 settitle("Game Client")
