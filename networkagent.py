@@ -44,7 +44,7 @@ class NetworkAgent:
         return address, port
     
     @staticmethod
-    def SaveConnectionData(qaddress:str, qport:int):
+    def SaveConnectionData(qaddress:str, qport:str):
         address = qaddress
         port = qport
 
@@ -98,7 +98,7 @@ class Server(NetworkAgent):
             os._exit(-1)
 
         self.socket.listen()
-        print(f"WAITING FOR CLIENT")
+        print(f"SERVER OPEN on {self.host}:{self.port}")
 
         while True: # serverloop
             cliet_socket, address = self.socket.accept()

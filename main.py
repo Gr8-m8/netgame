@@ -29,24 +29,32 @@ def main():
             inpraw = input("> ").lower()
             inp:str = inpraw.split(' ')[0]
             args:str = " ".join(inpraw.split(' ')[1:]) if ' ' in inpraw else ""
-        if inp in CMD_CLIENT:
-            if len(args.split('.'))==3 and len(args.split(':')==1): 
-                NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
-            settitle("Game Client")
-            networkagent = Client         
-        if inp in CMD_HOST:
-            if len(args.split('.'))==3 and len(args.split(':')==1):
-                NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
-            settitle("Game Server")
-            networkagent = Server
-        if inp in CMD_OFFLINE:
-            if len(args.split('.'))==3 and len(args.split(':')==1):
-                NetworkAgent.SaveConnectionData(args.split(':')[0], int(args.split(':')[1]))
-            settitle("Game Offline")
-            networkagent = NetworkAgent
+            inpip:str = None
+            inpport:str = None
+            if args and len(args.split('.'))>0 and len(args.split(':'))>0:
+                if len(args.split('.'))==3+1:
+                    inpip = args.split(':')[0]
+                if len(args.split(':'))==1+1:
+                    inpport = args.split(':')[1]
+
+                if inpip and inpport:
+                    NetworkAgent.SaveConnectionData(inpip, inpport)
+
+                print(f"|{inpip}={len(args.split('.'))}|{inpport}={len(args.split(':'))}|")
+
+            if inp in CMD_CLIENT:
+                settitle("Game Client")
+                networkagent = Client         
+            if inp in CMD_HOST:
+                settitle("Game Server")
+                networkagent = Server
+            if inp in CMD_OFFLINE:
+                settitle("Game Offline")
+                networkagent = NetworkAgent
+                
         SCALE = 75
         #input()
-
+        
         character = CharacterCreator("Server" if networkagent == Server else None)
         game = Game(networkagent, character)
         #game = Game2d(networkagent, (16, 9, SCALE))
