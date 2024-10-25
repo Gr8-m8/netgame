@@ -116,16 +116,23 @@ class Server(NetworkAgent):
                 data = client_socket.recv(2048*DATASCALE).decode()
                 if data:
                     if data.startswith("stop"):
-                        client_loop=False
+                        client_socket.close()
+                        os._exit(0)
                     if data.startswith("add"):self.addlogg.append(data)
                     print(f"got {data}")
                     for client in self.clients:
-                        self.data_send(client, data)
+                        try:
+                            self.data_send(client, data)
+                        except: continue
+                else:
+                    print(f"CLIENT CONNECTION END as {self.clients.index(client_socket)}")
+                    client_socket.close()
+            
         except:
-            print(f"CONNECTION END as {self.clients.index(client_socket)}")
+            print(f"SERVER CONNECTION END as {self.clients.index(client_socket)}")
             client_socket.close()
+            #os._exit(0)
         
-        os._exit(0)
 
     def data_send(self, client_socket: socket.socket, data: str = None):
         client_socket.send(data.encode()) if data else None
