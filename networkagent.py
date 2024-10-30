@@ -1,7 +1,52 @@
+#CREDIT@https://www.techwithtim.net/tutorials/python-online-game-tutorial
+#CREDIT@https://www.youtube.com/watch?v=8Q7OF8TP6u0
+
 import socket
+import pickle
 from threading import Thread
 import os
 from logger import logger
+
+class networkdata:
+    TAG_TARGET = "on"
+    TAG_ACTOR = "as"
+    TAGS = [TAG_TARGET,TAG_ACTOR]
+    KEY_COMMAND = "cmd"
+    KEY_COMMANDARGS = "raw"
+    
+    @staticmethod #SPLIT AT ' ' AND INDEX
+    def command(commandargs:str) -> dict:
+        commandargs = str(commandargs)
+        cmd = {}
+        cmd.update({networkdata.KEY_COMMANDARGS: commandargs})
+        key = commandargs.split(' ')[0]
+        cmd.update({networkdata.KEY_COMMAND: key})
+        
+        TAGS = [cmd[networkdata.KEY_COMMAND]]+networkdata.TAGS
+        tag = ""
+        for arg in commandargs.split(' '):
+            if arg in TAGS:
+                tag = arg
+                cmd.update({tag: []})
+            else:
+                cmd[tag].append(arg)
+
+        #for tag in TAGS:
+#
+            #commandarg = commandargs.split(tag)[1] if str(f" {tag} ") in commandargs else None
+            #cmd.update({tag: commandarg})
+#
+            #if commandarg:
+                #cmdargs = [cmd[tag].split(tagend)[0] if tagend in cmd[tag] else cmd[tag] for tagend in TAGS]
+                #cmdargs = [i.strip() for i in cmdargs if i]
+                #cmdargs = sorted(cmdargs, key=len)
+                #try: 
+                    #cmd[tag] = cmdargs[0].split(' ') if cmdargs else None
+                #except Exception as e:
+                    #print(e)
+                    #os._exit(0)
+
+        return cmd
 
 class NetworkAgent:
     DATAFILE = f"data/connection.data"
@@ -9,18 +54,19 @@ class NetworkAgent:
         self.host, self.port = NetworkAgent.LoadConnectionData()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.command = ""
+        self.commands = []
 
     def getCommand(self):
-        command = self.command
-        self.command = ""
-        return command
+        return self.commands.pop(0) if len(self.commands)>0 else None
 
-    def data_recive(self):
-        pass
+    def data_recive(self, data = None):
+        self.commands.append(data) if data else None
 
     def data_send(self, data = None):
-        self.command = data if data else None
+        self.data_recive(data)
+
+    def connect(self, data = None):
+        return data
         
 
     @staticmethod
@@ -71,18 +117,18 @@ class Client(NetworkAgent):
         try:
             while True: #server connection
                 DATASCALE = 1
-                data = self.socket.recv(2048*DATASCALE).decode()
+                data:dict = pickle.loads(self.socket.recv(2048*DATASCALE))
                 if data:
                     logger.Log(f"got {data}")
-                    if data.startswith("stop"):
+                    if "stop" in data[networkdata.KEY_COMMAND]:
                         os._exit(0)
-                    self.command = data
+                    self.commands.append(data)
         except:
             print("SERVER DOWN")
             os._exit(0)
 
     def data_send(self, data = None):
-        self.socket.send(data.encode()) if data else None
+        self.socket.send(pickle.dumps(data)) if data else None
 
 
 class Server(NetworkAgent):
@@ -113,12 +159,13 @@ class Server(NetworkAgent):
             client_loop = True
             while client_loop: #client connection
                 DATASCALE = 1
-                data = client_socket.recv(2048*DATASCALE).decode()
+                data:dict = pickle.loads(client_socket.recv(2048*DATASCALE))
                 if data:
-                    if data.startswith("stop"):
+                    if "stop" in data[networkdata.KEY_COMMAND]:
                         client_socket.close()
                         os._exit(0)
-                    if data.startswith("add"):self.addlogg.append(data)
+
+                    if "add" in data[networkdata.KEY_COMMAND]:self.addlogg.append(data)
                     print(f"got {data}")
                     for client in self.clients:
                         try:
@@ -135,5 +182,5 @@ class Server(NetworkAgent):
         
 
     def data_send(self, client_socket: socket.socket, data: str = None):
-        client_socket.send(data.encode()) if data else None
+        client_socket.send(pickle.dumps(data)) if data else None
         print(f"send {data} to {self.clients.index(client_socket)}")

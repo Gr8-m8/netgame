@@ -4,7 +4,7 @@ import time
 import os
 
 from getch import getch
-from networkagent import NetworkAgent
+from networkagent import NetworkAgent, networkdata
 from gameobject import GameObject, Location, Prop, Item, Actor
 from scenario import Scenario, scenario_TheCabin
 
@@ -12,6 +12,7 @@ def iswindows():
     return True if os.name == 'nt' else False
 
 DEBUG = True
+        
 
 class Timer:
     def __init__(self, step) -> None:
@@ -23,7 +24,7 @@ class Timer:
         self.time += self.step
 
 class Player(Actor):
-    def __init__(self, name: str, desc: dict, location:Location, see: GameObject = None) -> None:
+    def __init__(self, name: str, desc: dict, location:Location = None, see: GameObject = None) -> None:
         super().__init__(name, desc)
         self.location:Location = location
         self.see: GameObject = self.location if not see else see
@@ -46,19 +47,22 @@ class Game:
         self.scenario:Scenario = scenario_TheCabin(self) #networkagent.connect(scenario_TheCabin(self))
         #self.scenario.Save()
 
+        self.networkagent.data_send(networkdata.command(f"add {player.name} on {list(self.scenario.container.values())[0]} as Player"))
         self.player = player
         self.player.location = list(self.scenario.container.values())[0]
         self.player.see = self.player.location
-        self.networkagent.data_send(f"add {player.name} on {list(self.scenario.container.values())[0]} as PLAYER")
         lobby = True
 
-        try:
+        #try:
+        if True:
             self.game_loop = True
             while self.game_loop:
                 #self.Draw() #if not iswindows() else None
                 self.Update()
-        except:
-            self.Exit("GAME LOOP FAIL")
+        #except Exception as e:
+        #    exc_type, exc_obj, exc_tb = sys.exc_info()
+        #    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        #    self.Exit(f"GAME LOOP FAIL\nREASON: {e}\nAt:{exc_type, fname, exc_tb.tb_lineno}")
 
         print('\033[?25h')
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -127,7 +131,7 @@ class Game:
                 pass
             if key in KEYS_ACTIONS_RETURN:
                 self.action_log = ""
-                self.networkagent.data_send(f"{self.input} as {f'{self.player.location} {self.player}'}")
+                self.networkagent.data_send(networkdata.command(f"{self.input} as {self.player.location} {self.player}"))
                 self.input = ""
             if key in KEYS_ACTIONS_ESC:
                 self.input = ""
@@ -138,33 +142,26 @@ class Game:
         systemcommand = self.networkagent.getCommand()
         key = self.keyboard()
         
-
         self.Action(systemcommand) if systemcommand else None
         self.Draw() if systemcommand or key else None
 
     ACTION_CMD_STOP = ['stop']
     ACTION_CMD_MOVE = ['move', 'go']
     ACTION_CMD_ADD = ['add']
-    ACTION_CMD_JOIN = ['join']
     ACTION_CMD_USE = ['use']
     ACTION_CMD_SEE = ['see', 'inspect']
     ACTION_CMD_WAIT = [' ', 'wait']
     ACTION_CMD_SAY = ['say']
-    ACTION_CMDS = ACTION_CMD_STOP+ACTION_CMD_MOVE+ACTION_CMD_ADD+ACTION_CMD_JOIN+ACTION_CMD_USE+ACTION_CMD_SEE+ACTION_CMD_WAIT+ACTION_CMD_SAY
-    def Action(self, commandargs:str):
-        TARGET = 'on'
-        ACTOR = 'as'
+    ACTION_CMDS = ACTION_CMD_STOP+ACTION_CMD_MOVE+ACTION_CMD_ADD+ACTION_CMD_USE+ACTION_CMD_SEE+ACTION_CMD_WAIT+ACTION_CMD_SAY
+    def Action(self, qcommand:dict):
+        command:str = qcommand[networkdata.KEY_COMMAND] if networkdata.KEY_COMMAND in qcommand.keys() else None
+        gokey = qcommand[command] if command in qcommand.keys() else None
+        targetkey = qcommand[networkdata.TAG_TARGET] if networkdata.TAG_TARGET in qcommand.keys() else None
+        actorkey = qcommand[networkdata.TAG_ACTOR]  if networkdata.TAG_ACTOR in qcommand.keys() else None
 
-        #commandargs = commandargs.split(' ')
-        command:str = commandargs.split(' ')[0]
-        args:list = commandargs.split(' ')[1:]
-        gokey: list = commandargs.split(TARGET)[0].split(ACTOR)[0].split(' ')[1:] if ' ' in commandargs else None
-        gokey = [i for i in gokey if i] if gokey else None
-        targetkey: list = commandargs.split(TARGET)[1].split(ACTOR)[0].split(' ')[1:] if TARGET in commandargs else None
-        targetkey = [i for i in targetkey if i] if targetkey else None
-        actorkey: list = commandargs.split(ACTOR)[1].split(TARGET)[0].split(' ')[1:] if ACTOR in commandargs else None
-        actorkey = [i for i in actorkey if i] if actorkey else None
-        actor = self.scenario.getgo(actorkey) if actorkey else None
+        actor = self.scenario.getgo(actorkey)
+
+        
         if command not in self.ACTION_CMDS:
             self.ActionLog(f"{actor} can't '{command}'")
             return (False, "NOT IN CMDS")
@@ -188,10 +185,6 @@ class Game:
             if gokey and targetkey and actorkey:
                 return self.ActionAdd(gokey, targetkey, actorkey)
 
-        if command in self.ACTION_CMD_JOIN:
-            if gokey and targetkey and actorkey:
-                return self.ActionJoin(targetkey, gokey)
-
         if command in self.ACTION_CMD_SAY:
             if gokey and actorkey:
                 return self.ActionLog(self.ActionSay(gokey, actorkey))
@@ -204,7 +197,9 @@ class Game:
         actor: Actor = self.scenario.getgo(actorkey)
         gokey = actorkey[:-1]+gokey[:]
         go: Prop = self.scenario.getgo(gokey)
-        target: GameObject = self.scenario.getgo(targetkey)
+        print(actorkey, gokey, targetkey)
+        target: GameObject = self.scenario.getgo(targetkey) if targetkey else None
+
         if isinstance(go, Prop):
             go.Use(target, actor)
             return (True, f"{actor} USED {go}")
@@ -215,7 +210,7 @@ class Game:
 
     def ActionSee(self, gokey: list, actorkey: list):
         actor = self.scenario.getgo(actorkey)
-        gokey = actorkey[:-1]+gokey[:] 
+        gokey = [i for i in actorkey[:-1]+gokey[:] if i]
         go = self.scenario.getgo(gokey) #if gokey[-1]=='' else self.scenario.getgo(self.player.location)
 
         if actor.name == self.player.name:
@@ -245,9 +240,20 @@ class Game:
         else:
             self.ActionLog(f"{go} was moved to {destination}")
 
-    def ActionAdd(self, data:str, locationkey:str, type:str):
+    def ActionAdd(self, data:str, locationkey:str, typekey:str):
         location = self.scenario.getgo(locationkey)
-        go = GameObject(name=data[0], desc={"type":f"{type[0]}"})
+        gotype = GameObject
+        if typekey == "Location":
+            gotype = Location
+        if typekey == "Prop":
+            gotype = Prop
+        if typekey == "Item":
+            gotype = Item
+        if typekey == "Actior":
+            gotype = Actor
+        if typekey == "Player":
+            gotype = Player
+        go = gotype(name=data[0], desc={"type":f"{typekey[0]}"}) if gotype != Player else Player(name=data[0], desc={"type":f"{typekey[0]}"}, location=location, see=location)
         location.append(go)
 
     def ActionSay(self, message, actorkey):

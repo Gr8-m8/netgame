@@ -20,10 +20,8 @@ class GameObject:
     
     def getgo(self, key:list):
         gameobject: GameObject = None
-        try:
-            if len(key)>1: gameobject = self.container[key[0]].getgo(key[1:])
-            else: gameobject = self.container[key[0]]
-        except: pass
+        if len(key)>1: gameobject = self.container[key[0]].getgo(key[1:])
+        else: gameobject = self.container[key[0]] if key[0] in self.container else None
         return gameobject
     
     
