@@ -44,6 +44,7 @@ class Game:
         self.action_log = ""
         self.timer = Timer(0.1)
 
+        #self.SendScenario()
         self.scenario:Scenario = scenario_TheCabin(self) #networkagent.connect(scenario_TheCabin(self))
         #self.scenario.Save()
 
@@ -262,3 +263,7 @@ class Game:
 
     def ActionLog(self, log):
         self.action_log += f"{log}\n"
+
+    def SendScenario(self):
+        self.networkagent.data_send(networkdata.scenario(self.scenario))
+        return self.scenario

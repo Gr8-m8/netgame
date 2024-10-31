@@ -10,9 +10,11 @@ from logger import logger
 class networkdata:
     TAG_TARGET = "on"
     TAG_ACTOR = "as"
+    TAG_SCENARIO = "SCENARIO"
     TAGS = [TAG_TARGET,TAG_ACTOR]
     KEY_COMMAND = "cmd"
     KEY_COMMANDARGS = "raw"
+
     
     @staticmethod #SPLIT AT ' ' AND INDEX
     def command(commandargs:str) -> dict:
@@ -31,22 +33,13 @@ class networkdata:
             else:
                 cmd[tag].append(arg)
 
-        #for tag in TAGS:
-#
-            #commandarg = commandargs.split(tag)[1] if str(f" {tag} ") in commandargs else None
-            #cmd.update({tag: commandarg})
-#
-            #if commandarg:
-                #cmdargs = [cmd[tag].split(tagend)[0] if tagend in cmd[tag] else cmd[tag] for tagend in TAGS]
-                #cmdargs = [i.strip() for i in cmdargs if i]
-                #cmdargs = sorted(cmdargs, key=len)
-                #try: 
-                    #cmd[tag] = cmdargs[0].split(' ') if cmdargs else None
-                #except Exception as e:
-                    #print(e)
-                    #os._exit(0)
-
         return cmd
+    
+    @staticmethod
+    def scenario(scenario) -> dict:
+        d = {}
+        d.update({networkdata.TAG_SCENARIO: scenario})
+        return d
 
 class NetworkAgent:
     DATAFILE = f"data/connection.data"
@@ -136,6 +129,7 @@ class Server(NetworkAgent):
         super().__init__()
         self.clients = []
         self.addlogg = []
+        self.scenario = None
 
         try:
             self.socket.bind((self.host, self.port))
@@ -150,6 +144,7 @@ class Server(NetworkAgent):
             cliet_socket, address = self.socket.accept()
             self.clients.append(cliet_socket)
             print(f"CONNECTION {address} as {self.clients.index(cliet_socket)}")
+            self.data_send(cliet_socket, self.scenario)
             Thread(target=self.data_recive, args=(cliet_socket,)).start()
             for data in self.addlogg:
                 self.data_send(cliet_socket, data)
